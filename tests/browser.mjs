@@ -1,4 +1,4 @@
-import { chromium } from '@playwright/test';
+import { chromium, expect } from '@playwright/test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs/promises';
 import path from 'node:path';
@@ -66,7 +66,7 @@ await page.locator('input[type=file]').setInputFiles(path.resolve('test-results/
 await page.getByRole('button', { name: 'Restaurar copia', exact: true }).click();
 await page.getByRole('button', { name: 'Empezar de cero', exact: true }).click();
 await page.getByRole('button', { name: 'Crear mi plan', exact: true }).click();
-assert.equal(await page.getByLabel('Ingresos netos mensuales').inputValue(), '0');
+await expect(page.getByLabel('Ingresos netos mensuales')).toHaveValue('0');
 await page.getByRole('button', { name: 'Vista general', exact: true }).click();
 await page.getByText('No hay gastos aquí todavía').waitFor();
 
