@@ -36,6 +36,10 @@ Construida con React, Vite, Recharts y Lucide.
 
 ## Publicar en Render
 
+Aplicación publicada: **https://clara-finanzas.onrender.com**.
+
+El servicio actual se creó mediante la CLI de Render y está conectado a la rama `main` de `sorondoma-dotcom/clara-finanzas`. Los cambios de código se despliegan automáticamente. Para modificar la infraestructura, aplica los cambios de `render.yaml` en Render; este servicio no está vinculado a un Blueprint. Los pasos siguientes sirven para crear otra instalación.
+
 El archivo `render.yaml` configura Clara como un **Static Site**, con compilación y pruebas automáticas, Node.js 22 y publicación de `dist`. Los cambios enviados al repositorio vuelven a desplegar la aplicación automáticamente.
 
 1. Sube el proyecto a tu repositorio de GitHub.

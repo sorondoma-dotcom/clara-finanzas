@@ -9,7 +9,7 @@ const page = await browser.newPage({ viewport: { width: 1440, height: 1080 }, de
 const errors = [];
 page.on('pageerror', error => errors.push(error.message));
 await fs.mkdir('test-results', { recursive: true });
-await page.goto('http://127.0.0.1:5173');
+await page.goto(process.env.CLARA_BASE_URL || 'http://127.0.0.1:5173');
 await page.getByRole('heading', { name: 'Tu dinero, bajo control.' }).waitFor();
 await page.waitForTimeout(1300);
 await page.screenshot({ path: 'test-results/desktop.png', fullPage: true });
