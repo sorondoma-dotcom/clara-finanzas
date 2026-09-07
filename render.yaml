@@ -1,0 +1,30 @@
+# yaml-language-server: $schema=https://render.com/schema/render.yaml.json
+services:
+  - type: web
+    name: clara-finanzas
+    runtime: static
+    buildCommand: npm ci --include=dev && npm test && npm run build
+    staticPublishPath: ./dist
+    autoDeployTrigger: commit
+    envVars:
+      - key: NODE_VERSION
+        value: "22"
+      - key: SKIP_INSTALL_DEPS
+        value: "true"
+    routes:
+      - type: rewrite
+        source: /*
+        destination: /index.html
+    headers:
+      - path: /*
+        name: X-Content-Type-Options
+        value: nosniff
+      - path: /*
+        name: Referrer-Policy
+        value: strict-origin-when-cross-origin
+      - path: /index.html
+        name: Cache-Control
+        value: no-cache
+      - path: /assets/*
+        name: Cache-Control
+        value: public, max-age=31536000, immutable
