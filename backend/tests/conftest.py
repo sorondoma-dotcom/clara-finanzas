@@ -24,6 +24,14 @@ def resolve_test_database_url() -> str:
 
 
 @pytest.fixture(scope='session')
+def alembic_config(database_url) -> AlembicConfig:
+    config = AlembicConfig(os.path.join(BACKEND_DIR, 'alembic.ini'))
+    config.set_main_option('script_location', os.path.join(BACKEND_DIR, 'migrations'))
+    config.attributes['database_url'] = database_url
+    return config
+
+
+@pytest.fixture(scope='session')
 def database_url() -> str:
     url = make_url(resolve_test_database_url())
     admin = create_engine(url.set(database='postgres'), isolation_level='AUTOCOMMIT')

@@ -42,7 +42,7 @@ function ForecastTable({ year }) {
             {year.map(m => (
               <tr key={m.key}>
                 <td className="capitalize">{monthLabel(m.key)}</td>
-                <td>{euro(m.income)}</td>
+                <td>{euro(m.income, 2)}{m.incomeEstimated && <span title="Ingreso estimado: no has indicado el importe de este mes" className="gap-dot"> ~</span>}</td>
                 <td>{euro(m.fixed, 2)}</td>
                 <td>{euro(m.provision + m.shortfall, 2)}{m.shortfall > 0 && <span title={`Incluye ${euro(m.shortfall, 2)} para completar reservas`} className="gap-dot"> *</span>}</td>
                 <td>{euro(m.variable)}</td>

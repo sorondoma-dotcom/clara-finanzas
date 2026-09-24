@@ -1,26 +1,33 @@
 import React, { useEffect, useState } from 'react';
 import { ArrowDownToLine, Check, RotateCcw, Settings2, ShieldCheck, Upload } from 'lucide-react';
+import IncomeFields from './IncomeFields';
 
-const pick = data => ({ income: data.income, variable: data.variable, cushion: data.cushion, startMonth: data.startMonth });
+const pick = data => ({
+  income: data.income, variable: data.variable, cushion: data.cushion, startMonth: data.startMonth,
+  incomeMode: data.incomeMode || 'fixed',
+  incomes: Object.fromEntries(Object.entries(data.incomes || {}).map(([month, amount]) => [month, String(amount)])),
+});
 
-function MoneyField({ label, description, value, onChange }) {
-  return <label>{label}<span className="field-description">{description}</span><input required type="number" min="0" max="100000000" step="0.01" value={value} onChange={e => onChange(e.target.value)} /></label>;
+function MoneyField({ label, description, value, onChange, ...props }) {
+  return <label>{label}{description && <span className="field-description">{description}</span>}<input required type="number" min="0" max="100000000" step="0.01" value={value} onChange={e => onChange(e.target.value)} {...props} /></label>;
 }
 
 export default function PlanSettingsForm({ data, onSave, onExport, onImport, onReset }) {
   const [values, setValues] = useState(() => pick(data));
-  useEffect(() => { setValues(pick(data)); }, [data.income, data.variable, data.cushion, data.startMonth]);
+  useEffect(() => { setValues(pick(data)); }, [data.income, data.variable, data.cushion, data.startMonth, data.incomeMode, data.incomes]);
   const set = key => value => setValues(v => ({ ...v, [key]: value }));
   function submit(e) {
     e.preventDefault();
-    onSave({ ...values, income: Number(values.income), variable: Number(values.variable), cushion: Number(values.cushion) });
+    // Solo se guardan los meses con importe; el resto usa el ingreso estimado.
+    const incomes = Object.fromEntries(Object.entries(values.incomes).filter(([, amount]) => amount !== '').map(([month, amount]) => [month, Number(amount)]));
+    onSave({ ...values, incomes, income: Number(values.income), variable: Number(values.variable), cushion: Number(values.cushion) });
   }
   return (
     <div className="settings-layout">
       <article className="panel settings-panel">
         <div className="panel-heading"><div><h2>La base de tu plan</h2><p>Estas cifras se aplican a cada mes de la previsión.</p></div><Settings2 size={21} /></div>
         <form onSubmit={submit}>
-          <MoneyField label="Ingresos netos mensuales (€)" description="El dinero que esperas recibir cada mes." value={values.income} onChange={set('income')} />
+          <IncomeFields values={values} onChange={setValues} />
           <MoneyField label="Presupuesto de vida diaria (€)" description="Comida, ocio, compras y otros gastos variables del mes." value={values.variable} onChange={set('variable')} />
           <MoneyField label="Colchón de seguridad mensual (€)" description="Una cantidad que proteges cada mes para imprevistos." value={values.cushion} onChange={set('cushion')} />
           <label>Inicio de la previsión<input required type="month" value={values.startMonth} onChange={e => set('startMonth')(e.target.value)} /><span className="field-description">Si cambias el inicio, actualiza también el saldo inicial de tus reservas.</span></label>

@@ -26,4 +26,4 @@ export function readLegacyPlan() {
   } catch { return null; }
 }
 
-export const emptyPlan = () => ({ version: 1, demo: false, startMonth: monthKey(new Date()), income: 0, variable: 0, cushion: 0, expenses: [], paid: {} });
+export const emptyPlan = () => ({ version: 1, demo: false, startMonth: monthKey(new Date()), incomeMode: 'fixed', incomes: {}, income: 0, variable: 0, cushion: 0, expenses: [], paid: {} });

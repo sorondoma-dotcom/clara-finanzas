@@ -1,0 +1,27 @@
+/* Ingreso fijo / variable en la configuración del plan */
+
+.income-fields{border:0;margin:0 0 25px;padding:0;min-width:0}
+.income-fields legend{display:block;margin-bottom:12px;font-size:11px;font-weight:550;color:#6e805d}
+.income-fields>label{display:block;font-size:11px;font-weight:550;color:#6e805d;margin-top:18px}
+.income-mode{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+.income-mode button{display:flex;flex-direction:column;gap:5px;text-align:left;padding:13px 14px;border:1px solid #dfe6d5;border-radius:10px;background:#fff;transition:border-color .15s,background .15s,box-shadow .15s}
+.income-mode button:hover{border-color:#c5d6ae}
+.income-mode strong{font-size:12px;color:#435c35}
+.income-mode span{font-size:10px;line-height:1.5;color:#98a28d}
+.income-mode .selected{border-color:#7fa35a;background:#f4f8ec;box-shadow:0 0 0 3px #d9efa855}
+.income-mode .selected strong{color:var(--green)}
+.income-mode button:focus-visible{outline:2px solid #7fa35a;outline-offset:2px}
+
+.income-months{margin-top:18px;padding:16px;border:1px solid #e8eddd;border-radius:12px;background:#f9faf5;animation:fade-in .25s ease both}
+.income-months-heading{display:flex;justify-content:space-between;align-items:baseline;gap:10px;margin-bottom:12px}
+.income-months-heading span{font-size:11px;font-weight:600;color:#56704a}
+.income-months-heading small{font-size:10px;color:#98a28d}
+.income-months-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:10px 12px}
+.income-months-grid label{font-size:10px;font-weight:550;color:#7d8b72}
+.income-months-grid input{margin-top:5px;padding:9px 10px;font-size:12px}
+.income-months .text-button{margin-top:14px}
+
+@media(max-width:460px){
+  .income-mode{grid-template-columns:1fr}
+  .income-months-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
+}

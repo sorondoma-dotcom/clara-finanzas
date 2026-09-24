@@ -25,7 +25,7 @@ El alta y el cambio de contraseña generan un código de recuperación de un sol
 ## Rendimiento y concurrencia
 
 - Pool de conexiones con `pool_pre_ping`, tiempo máximo de consulta de 5 s y de espera de conexión de 5 s.
-- Cada plan es un documento JSONB con clave primaria de usuario: una lectura obtiene el plan completo.
+- El plan se almacena normalizado: configuración en `plans` (importes `NUMERIC(11,2)`, modo de ingreso y mes de inicio con `CHECK`), gastos en `expenses`, ingresos por mes en `monthly_incomes` y estados de pago en `paid_charges`, todos con clave foránea y borrado en cascada. La base rechaza por sí misma importes negativos, categorías, frecuencias o meses no válidos aunque falle la validación de la API. Cada guardado sustituye el plan en una única transacción.
 - Control de concurrencia optimista (`UPDATE … WHERE revision = ?`): los conflictos devuelven 409 y exigen resolución explícita.
 - Consulta ligera de revisión para detectar cambios de otros dispositivos. La actividad de sesión se actualiza como máximo cada cinco minutos y las sesiones y límites caducados se limpian cada 15 minutos.
 - Índices en correo, token de sesión, usuario y caducidades; las pruebas comprueban su uso con `EXPLAIN`.
@@ -40,6 +40,6 @@ Vigila errores 429/503, latencia, conexiones de PostgreSQL y avisos de seguridad
 
 ## Validación
 
-`backend/tests` (pytest contra PostgreSQL) cubre aislamiento entre usuarios, CSRF y origen, validación, inyección SQL, tamaño de cuerpo, límites de intentos, revocación, expiración por inactividad y absoluta, límite de sesiones, recuperación, cambio de contraseña, cabeceras de producción e índices. `npm run test:browser` recorre registro, login, recuperación, guardado entre navegadores, conflictos y vista móvil.
+`backend/tests` (pytest contra PostgreSQL) cubre aislamiento entre usuarios, CSRF y origen, validación, inyección SQL, restricciones de la base, ingreso variable, migración de planes antiguos, tamaño de cuerpo, límites de intentos, revocación, expiración por inactividad y absoluta, límite de sesiones, recuperación, cambio de contraseña, cabeceras de producción e índices. `npm run test:browser` recorre registro, login, recuperación, guardado entre navegadores, conflictos y vista móvil.
 
 Referencias: [OWASP Authentication](https://cheatsheetseries.owasp.org/cheatsheets/Authentication_Cheat_Sheet.html), [OWASP Session Management](https://cheatsheetseries.owasp.org/cheatsheets/Session_Management_Cheat_Sheet.html), [OWASP Password Storage](https://cheatsheetseries.owasp.org/cheatsheets/Password_Storage_Cheat_Sheet.html).

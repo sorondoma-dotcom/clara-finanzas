@@ -8,6 +8,7 @@ from pydantic import AfterValidator, BaseModel, BeforeValidator, ConfigDict, Ema
 CATEGORIES = ('Vivienda', 'Suscripciones', 'Suministros', 'Transporte', 'Salud', 'Seguros', 'Otros')
 MONTH_PATTERN = r'^(20\d{2}|2100)-(0[1-9]|1[0-2])$'
 ID_PATTERN = r'^[a-zA-Z0-9_-]{1,80}$'
+MONTH = re.compile(MONTH_PATTERN)
 PAID_KEY = re.compile(r'^(20\d{2}|2100)-(0[1-9]|1[0-2]):[a-zA-Z0-9_-]{1,80}$')
 
 
@@ -78,7 +79,10 @@ class PlanDocument(Strict):
     version: Literal[1]
     demo: StrictBool | None = None
     startMonth: Month
+    # 'fixed': mismo ingreso cada mes. 'variable': importe por mes en `incomes`; `income` es la estimación por defecto.
+    incomeMode: Literal['fixed', 'variable'] = 'fixed'
     income: Money
+    incomes: Annotated[dict[str, Money], Field(max_length=600)] = {}
     variable: Money
     cushion: Money
     expenses: Annotated[list[Expense], Field(max_length=1000)]
@@ -90,11 +94,9 @@ class PlanDocument(Strict):
             raise ValueError('identificadores de gasto repetidos')
         if len(self.paid) > 24_000 or not all(PAID_KEY.match(key) for key in self.paid):
             raise ValueError('estados de pago no válidos')
+        if not all(MONTH.match(key) for key in self.incomes):
+            raise ValueError('meses de ingreso no válidos')
         return self
-
-    @classmethod
-    def empty(cls, start_month: str) -> dict:
-        return {'version': 1, 'demo': False, 'startMonth': start_month, 'income': 0, 'variable': 0, 'cushion': 0, 'expenses': [], 'paid': {}}
 
 
 class SavePlanIn(Strict):

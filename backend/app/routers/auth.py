@@ -5,9 +5,10 @@ from sqlalchemy import delete, select, update
 from sqlalchemy.exc import IntegrityError
 
 from ..errors import ApiError
-from ..models import AuthSession, Plan, User
+from ..models import AuthSession, User
+from ..plan_store import create_empty_plan
 from ..rate_limit import consume
-from ..schemas import LoginIn, PasswordChangeIn, PlanDocument, RecoverIn, RegisterIn
+from ..schemas import LoginIn, PasswordChangeIn, RecoverIn, RegisterIn
 from ..security import csrf_for, hash_password, hash_token, needs_rehash, new_token, safe_equal, verify_password
 from ..sessions import IDLE_AGE, MAX_SESSIONS, Config, CurrentUser, Db, Now, issue_session, public_user
 
@@ -35,7 +36,7 @@ def register(body: RegisterIn, request: Request, response: Response, db: Db, set
     try:
         db.add(user)
         db.flush()
-        db.add(Plan(user_id=user.id, document=PlanDocument.empty(now.strftime('%Y-%m')), revision=0, updated_at=now))
+        create_empty_plan(db, user.id, now)
         auth = issue_session(db, request, response, settings, now, user)
         db.commit()
     except IntegrityError:

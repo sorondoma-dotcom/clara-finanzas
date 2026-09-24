@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { Suspense, lazy, useEffect, useRef, useState } from 'react';
 import { useCloudPlan } from '../hooks/useCloudPlan';
 import { usePlanView } from '../hooks/usePlanView';
 import { useToast } from '../hooks/useToast';
@@ -13,17 +13,24 @@ import Toast from '../components/ui/Toast';
 import ExpenseForm from '../components/expenses/ExpenseForm';
 import PlanSettingsForm from '../components/settings/PlanSettingsForm';
 import AccountPanel from '../features/auth/AccountPanel';
-import OverviewPage from '../pages/OverviewPage';
-import ExpensesPage from '../pages/ExpensesPage';
-import CalendarPage from '../pages/CalendarPage';
-import ForecastPage from '../pages/ForecastPage';
-import ReservesPage from '../pages/ReservesPage';
+import PageSkeleton from '../components/ui/PageSkeleton';
+import { prefersReducedMotion } from '../lib/motion';
 import MethodModal from '../modals/MethodModal';
 import AlertsModal from '../modals/AlertsModal';
 import { DeleteExpenseModal, ImportPlanModal, NewPlanModal, ReloadPlanModal } from '../modals/ConfirmModals';
 
+// Cada sección se descarga bajo demanda: la primera visita muestra el esqueleto mientras llega su código.
+export const loadOverviewPage = () => import('../pages/OverviewPage');
+const OverviewPage = lazy(loadOverviewPage);
+const ExpensesPage = lazy(() => import('../pages/ExpensesPage'));
+const CalendarPage = lazy(() => import('../pages/CalendarPage'));
+const ForecastPage = lazy(() => import('../pages/ForecastPage'));
+const ReservesPage = lazy(() => import('../pages/ReservesPage'));
+
 const SYNC_LABELS = { saved: 'Sincronizado con tu cuenta', saving: 'Guardando cambios…', pending: 'Cambios pendientes', conflict: 'Revisa el conflicto', error: 'Sin sincronizar', expired: 'Sesión caducada' };
 const SYNC_PROBLEMS = ['error', 'conflict', 'expired'];
+// Duración de la transición entre secciones del menú.
+const PAGE_TRANSITION_MS = 380;
 
 /** Espacio del usuario autenticado: estado del plan, navegación entre páginas y diálogos. */
 export default function Dashboard({ initialPlan, user, authGeneration, onExpired, onLogout, onAuthChanged }) {
@@ -39,12 +46,24 @@ export default function Dashboard({ initialPlan, user, authGeneration, onExpired
   // Gasto en edición o plan pendiente de importar, según el diálogo abierto.
   const [editing, setEditing] = useState(null);
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [switching, setSwitching] = useState(false);
+  const switchTimer = useRef();
+  useEffect(() => () => clearTimeout(switchTimer.current), []);
   const [toast, notify] = useToast();
   const fileRef = useRef();
   const view = usePlanView(data, offset);
   const closeModal = () => setModal(null);
 
-  const navigate = id => { setPage(id); setMobileOpen(false); };
+  const navigate = id => {
+    setMobileOpen(false);
+    if (id === page) return;
+    setPage(id);
+    window.scrollTo({ top: 0 });
+    if (prefersReducedMotion()) return;
+    setSwitching(true);
+    clearTimeout(switchTimer.current);
+    switchTimer.current = setTimeout(() => setSwitching(false), PAGE_TRANSITION_MS);
+  };
   const updateData = updater => setData(previous => ({ ...updater(previous), demo: false }));
   const openExpense = (expense = null) => { setEditing(expense); setModal('expense'); };
   const saveExpense = expense => {
@@ -86,13 +105,16 @@ export default function Dashboard({ initialPlan, user, authGeneration, onExpired
     <div className="app-shell">
       <Sidebar page={page} open={mobileOpen} expenseCount={data.expenses.length} userName={user.name} syncLabel={syncLabel} onNavigate={navigate} onShowMethod={() => setModal('method')} onClose={() => setMobileOpen(false)} />
       <div className="main-shell">
-        <Topbar page={page} user={user} syncLabel={syncLabel} hasAlerts={view.alerts.length > 0} onOpenMenu={() => setMobileOpen(true)} onShowAlerts={() => setModal('alerts')} onOpenAccount={() => navigate('settings')} />
+        {switching && <div className="route-progress" aria-hidden="true" />}
+        <Topbar page={page} user={user} syncLabel={syncLabel} hasAlerts={view.alerts.length > 0} menuOpen={mobileOpen} onToggleMenu={() => setMobileOpen(o => !o)} onShowAlerts={() => setModal('alerts')} onOpenAccount={() => navigate('settings')} />
         <main>
           <PageHeading page={page} monthPicker={page !== 'settings' && <MonthPicker month={view.month} offset={offset} onChange={setOffset} />} onAddExpense={() => openExpense()} />
           {SYNC_PROBLEMS.includes(cloud.status) && <SyncNotice cloud={cloud} onExport={exportData} onReload={() => setModal('reload-cloud')} />}
           {legacy && <LegacyPlanBanner onImport={() => { setEditing(legacy); setModal('import'); }} onDismiss={() => setLegacy(null)} />}
           {data.demo && <DemoBanner onStart={() => setModal('start')} />}
-          {pages[page]()}
+          {switching
+            ? <PageSkeleton />
+            : <Suspense fallback={<PageSkeleton />}><div className="page-enter" key={page}>{pages[page]()}</div></Suspense>}
           <MainFooter onShowMethod={() => setModal('method')} />
         </main>
       </div>

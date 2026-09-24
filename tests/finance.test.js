@@ -75,3 +75,14 @@ test('import validates amounts, recurrence, month formats and unique IDs', () =>
   assert.equal(Boolean(validateData({ ...base, expenses: [expense(), expense()] })), false);
   assert.equal(Boolean(validateData({ ...base, expenses: [expense({ amount: Infinity })] })), false);
 });
+test('variable income uses the amount of each month and the estimate otherwise', () => {
+  const data = { ...base, incomeMode: 'variable', income: 900, incomes: { '2026-09': 1200, '2026-10': 0 } };
+  const [sep, oct, nov] = forecast(data, 3);
+  assert.equal(sep.income, 1200); assert.equal(sep.available, 800); assert.equal(sep.incomeEstimated, false);
+  assert.equal(oct.income, 0); assert.equal(oct.available, -400);
+  assert.equal(nov.income, 900); assert.equal(nov.incomeEstimated, true);
+  assert.equal(forecast({ ...data, incomeMode: 'fixed' }, 1)[0].income, 2000 - 1100);
+  assert.ok(validateData(data));
+  assert.equal(validateData({ ...data, incomes: { '2026-13': 5 } }), false);
+  assert.equal(validateData({ ...data, incomeMode: 'weekly' }), false);
+});

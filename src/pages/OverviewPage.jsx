@@ -1,13 +1,15 @@
 import React, { useState } from 'react';
 import { AlertTriangle, ArrowDownLeft, ArrowRight, ArrowUpRight, CalendarDays, CheckCheck, CircleHelp, CreditCard, ShieldCheck, Wallet } from 'lucide-react';
-import { colors, euro, frequencyLabels, monthLabel } from '../lib/finance';
+import { colors, euro, frequencyLabels, isVariableIncome, monthLabel } from '../lib/finance';
 import CategoryDonut from '../components/charts/CategoryDonut';
 import ForecastChart from '../components/charts/ForecastChart';
 import ExpenseTable from '../components/expenses/ExpenseTable';
 
 const RANGES = [6, 12];
 
-function SummaryCards({ current, expenseTotal, expenseCount, onNavigate, onShowMethod }) {
+const incomeNote = (month, variable) => !variable ? 'Tu ingreso mensual previsto' : month.incomeEstimated ? 'Ingreso variable · estimado' : 'Ingreso variable · indicado';
+
+function SummaryCards({ current, variableIncome, expenseTotal, expenseCount, onNavigate, onShowMethod }) {
   return (
     <section className="summary-grid">
       <article className={`available-card ${current.available < 0 ? 'negative' : ''}`}>
@@ -24,7 +26,7 @@ function SummaryCards({ current, expenseTotal, expenseCount, onNavigate, onShowM
         <div className="metric-icon mint"><ArrowDownLeft size={20} /></div>
         <span className="metric-label">Ingresos del mes</span>
         <strong>{euro(current.income, 2)}</strong>
-        <button className="metric-footer" onClick={() => onNavigate('settings')}><span className="status-dot" />Tu ingreso mensual previsto <ArrowUpRight size={14} /></button>
+        <button className="metric-footer" onClick={() => onNavigate('settings')}><span className="status-dot" />{incomeNote(current, variableIncome)} <ArrowUpRight size={14} /></button>
       </article>
       <article className="metric-card">
         <div className="metric-icon peach"><CreditCard size={19} /></div>
@@ -90,7 +92,7 @@ export default function OverviewPage({ data, view, onNavigate, onShowMethod, onO
   const { current, month, ahead, alerts, upcoming, pending, categoryData, expenseTotal } = view;
   return (
     <>
-      <SummaryCards current={current} expenseTotal={expenseTotal} expenseCount={data.expenses.length} onNavigate={onNavigate} onShowMethod={onShowMethod} />
+      <SummaryCards current={current} variableIncome={isVariableIncome(data)} expenseTotal={expenseTotal} expenseCount={data.expenses.length} onNavigate={onNavigate} onShowMethod={onShowMethod} />
       <StatusNotice alerts={alerts} upcoming={upcoming} onNavigate={onNavigate} />
       <section className="middle-grid">
         <article className="panel forecast-panel">

@@ -1,4 +1,8 @@
+from decimal import Decimal
+
+import pytest
 from sqlalchemy import text
+from sqlalchemy.exc import IntegrityError
 
 from app.security import hash_token
 
@@ -229,3 +233,54 @@ def test_production_cookie_headers_and_https_only(make_client):
 def test_unknown_api_routes_and_health(client):
     assert client.get('/api/nothing').json() == {'error': 'Recurso no encontrado.'}
     assert client.get('/healthz').json() == {'status': 'ok'}
+
+
+def test_variable_income_is_stored_in_typed_tables(client, db):
+    auth = register(client)
+    plan = demo_plan() | {'incomeMode': 'variable', 'income': 480, 'incomes': {'2026-09': 1150.5, '2026-10': 0}}
+    plan['paid'] = {'2026-09:rent': True}
+    assert mutation(client, '/api/plan', {'revision': 0, 'data': plan}, auth['csrfToken'], 'put').status_code == 200
+    stored = client.get('/api/plan').json()['data']
+    assert stored['incomeMode'] == 'variable' and stored['income'] == 480
+    assert stored['incomes'] == {'2026-09': 1150.5, '2026-10': 0}
+    assert [e['id'] for e in stored['expenses']] == ['rent', 'car'] and stored['paid'] == {'2026-09:rent': True}
+    db.commit()
+    row = db.execute(text('SELECT income_mode, income, variable_budget, start_month FROM plans')).one()
+    assert row.income_mode == 'variable' and str(row.income) == '480.00' and str(row.variable_budget) == '420.00'
+    assert db.execute(text("SELECT amount FROM monthly_incomes WHERE month = '2026-09'")).scalar_one() == Decimal('1150.50')
+    assert db.execute(text('SELECT count(*) FROM expenses')).scalar_one() == 2
+    for broken in ({'incomeMode': 'sometimes'}, {'incomes': {'2026-13': 10}}, {'incomes': {'2026-09': -5}}):
+        assert mutation(client, '/api/plan', {'revision': 1, 'data': plan | broken}, auth['csrfToken'], 'put').status_code == 400, broken
+
+
+def test_database_constraints_reject_invalid_rows(client, db):
+    auth = register(client)
+    db.commit()
+    with pytest.raises(IntegrityError):
+        db.execute(text("UPDATE plans SET income = -1 WHERE user_id = :id"), {'id': auth['user']['id']})
+    db.rollback()
+
+
+def test_migration_converts_legacy_json_plans(alembic_config, database_url, make_client):
+    import json
+    from alembic import command
+    from sqlalchemy import create_engine
+
+    command.downgrade(alembic_config, '0001')
+    engine = create_engine(database_url)
+    user_id = '11111111-1111-1111-1111-111111111111'
+    with engine.begin() as connection:
+        connection.execute(text("INSERT INTO users VALUES (:id, 'legacy@example.com', 'Legado', 'x', 'y', now(), now())"), {'id': user_id})
+        legacy = demo_plan() | {'paid': {'2026-09:rent': True}}
+        legacy['expenses'][1]['end'] = '2030-10'
+        connection.execute(text('INSERT INTO plans (user_id, document, revision, updated_at) VALUES (:id, :doc, 3, now())'), {'id': user_id, 'doc': json.dumps(legacy)})
+    command.upgrade(alembic_config, 'head')
+    with engine.connect() as connection:
+        row = connection.execute(text('SELECT start_month, income, cushion, revision FROM plans WHERE user_id = :id'), {'id': user_id}).one()
+        assert (row.start_month, str(row.income), str(row.cushion), row.revision) == ('2026-09', '2850.00', '200.00', 3)
+        expenses = connection.execute(text('SELECT id, amount, end_month, position FROM expenses ORDER BY position')).all()
+        assert [(e.id, str(e.amount), e.end_month) for e in expenses] == [('rent', '750.00', None), ('car', '360.50', '2030-10')]
+        assert connection.execute(text('SELECT paid FROM paid_charges')).scalar_one() is True
+        connection.execute(text('DELETE FROM users'))
+        connection.commit()
+    engine.dispose()

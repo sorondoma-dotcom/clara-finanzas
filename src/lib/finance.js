@@ -18,6 +18,10 @@ export function dueDate(expense, month) {
   const [year, m] = month.split('-').map(Number);
   return new Date(year, m - 1, Math.min(expense.day, new Date(year, m, 0).getDate()), 12);
 }
+/** Ingreso de un mes: el registrado si el ingreso es variable, o el ingreso habitual/estimado. */
+export const incomeFor = (data, key) => data.incomeMode === 'variable' && Object.hasOwn(data.incomes ?? {}, key) ? data.incomes[key] : data.income;
+export const isVariableIncome = data => data.incomeMode === 'variable';
+
 export function forecast(data, months = 12) {
   const cents = amount => Math.round(amount * 100);
   const funds = Object.fromEntries(data.expenses.map(e => [e.id, cents(e.fund || 0)]));
@@ -38,13 +42,14 @@ export function forecast(data, months = 12) {
       if (due) chargesCents += cents(e.amount);
       return { ...e, due, reserve: reserve / 100, gap: gap / 100, fundAfter: funds[e.id] / 100, date: dueDate(e, key) };
     });
-    const available = (cents(data.income) - fixedCents - provisionCents - shortfallCents - cents(data.variable) - cents(data.cushion)) / 100;
-    return { key, name: monthLabel(key, true).replace('.', ''), income: data.income, fixed: fixedCents / 100, provision: provisionCents / 100, shortfall: shortfallCents / 100, charges: chargesCents / 100, variable: data.variable, cushion: data.cushion, available, committed: (cents(data.income) - cents(available)) / 100, items };
+    const income = incomeFor(data, key);
+    const available = (cents(income) - fixedCents - provisionCents - shortfallCents - cents(data.variable) - cents(data.cushion)) / 100;
+    return { key, name: monthLabel(key, true).replace('.', ''), income, incomeEstimated: isVariableIncome(data) && !Object.hasOwn(data.incomes ?? {}, key), fixed: fixedCents / 100, provision: provisionCents / 100, shortfall: shortfallCents / 100, charges: chargesCents / 100, variable: data.variable, cushion: data.cushion, available, committed: (cents(income) - cents(available)) / 100, items };
   });
 }
 export function demoData() {
   const start = monthKey(new Date());
-  return { version: 1, demo: true, startMonth: start, income: 2850, variable: 420, cushion: 200, paid: {}, expenses: [
+  return { version: 1, demo: true, startMonth: start, incomeMode: 'fixed', incomes: {}, income: 2850, variable: 420, cushion: 200, paid: {}, expenses: [
     { id: 'rent', name: 'Alquiler de casa', amount: 750, category: 'Vivienda', frequency: 'monthly', day: 1, start, fund: 0 },
     { id: 'power', name: 'Electricidad', amount: 58, category: 'Suministros', frequency: 'monthly', day: 12, start, fund: 0 },
     { id: 'internet', name: 'Fibra + móvil', amount: 39.90, category: 'Suministros', frequency: 'monthly', day: 15, start, fund: 0 },
@@ -63,5 +68,6 @@ export function demoData() {
 export function validateData(value) {
   const money = n => typeof n === 'number' && Number.isFinite(n) && n >= 0 && n <= 100000000;
   const month = s => typeof s === 'string' && /^\d{4}-(0[1-9]|1[0-2])$/.test(s);
-  return value && value.version === 1 && month(value.startMonth) && money(value.income) && money(value.variable) && money(value.cushion) && Array.isArray(value.expenses) && value.expenses.length <= 1000 && new Set(value.expenses.map(e => e.id)).size === value.expenses.length && value.expenses.every(e => e && typeof e.id === 'string' && typeof e.name === 'string' && e.name.length > 0 && e.name.length <= 100 && money(e.amount) && money(e.fund ?? 0) && categories.includes(e.category) && Object.hasOwn(intervals, e.frequency) && Number.isInteger(e.day) && e.day >= 1 && e.day <= 31 && month(e.start) && (!e.end || (month(e.end) && e.end >= e.start))) && value.paid && typeof value.paid === 'object' && !Array.isArray(value.paid) && Object.values(value.paid).every(v => typeof v === 'boolean');
+  const incomesValid = value?.incomes === undefined || (value.incomes && typeof value.incomes === 'object' && !Array.isArray(value.incomes) && Object.keys(value.incomes).length <= 600 && Object.entries(value.incomes).every(([k, v]) => month(k) && money(v)));
+  return value && value.version === 1 && month(value.startMonth) && money(value.income) && [undefined, 'fixed', 'variable'].includes(value.incomeMode) && incomesValid && money(value.variable) && money(value.cushion) && Array.isArray(value.expenses) && value.expenses.length <= 1000 && new Set(value.expenses.map(e => e.id)).size === value.expenses.length && value.expenses.every(e => e && typeof e.id === 'string' && typeof e.name === 'string' && e.name.length > 0 && e.name.length <= 100 && money(e.amount) && money(e.fund ?? 0) && categories.includes(e.category) && Object.hasOwn(intervals, e.frequency) && Number.isInteger(e.day) && e.day >= 1 && e.day <= 31 && month(e.start) && (!e.end || (month(e.end) && e.end >= e.start))) && value.paid && typeof value.paid === 'object' && !Array.isArray(value.paid) && Object.values(value.paid).every(v => typeof v === 'boolean');
 }
