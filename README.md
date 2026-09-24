@@ -45,15 +45,24 @@ flowchart LR
 │   │   ├── ExpensesPage.jsx      Listado de gastos con búsqueda y filtro
 │   │   ├── CalendarPage.jsx      Calendario del mes y marcado de cobros pagados
 │   │   ├── ForecastPage.jsx      Previsión a 12 meses, simulador y tabla
-│   │   └── ReservesPage.jsx      Reservas para pagos trimestrales y anuales
+│   │   ├── ReservesPage.jsx      Reservas para pagos trimestrales y anuales
+│   │   └── SettingsPage.jsx      Configuración: menú superior de apartados y panel activo
 │   ├── components/
 │   │   ├── layout/               Sidebar (menú hamburguesa en móvil), Topbar, PageHeading, MainFooter, avisos
-│   │   ├── settings/             PlanSettingsForm (base del plan) e IncomeFields (ingreso fijo/variable)
+│   │   ├── settings/             Apartados de Configuración
+│   │   │   ├── SettingsTabs.jsx      Menú superior de pestañas (teclado: flechas, Inicio, Fin)
+│   │   │   ├── SettingsSection.jsx   Cabecera y estructura común de cada apartado
+│   │   │   ├── EconomicSettings.jsx  Configuración económica + resumen del mes
+│   │   │   ├── IncomeFields.jsx      Ingreso fijo o variable por mes
+│   │   │   └── DataSettings.jsx      Datos y copias: exportar, importar y empezar de cero
 │   │   ├── expenses/             Tabla, formulario e icono de gastos
 │   │   ├── charts/               Gráfico de previsión, donut por categorías y tooltip
 │   │   └── ui/                   Modal, Toast, MonthPicker, LoadingScreen, PageSkeleton
 │   ├── modals/                   Diálogos: cálculo del disponible, avisos, confirmaciones
-│   ├── features/auth/            Acceso, registro, código de recuperación y panel de cuenta/sesiones
+│   ├── features/auth/            Acceso, registro y código de recuperación, además de:
+│   │   ├── AccountSettings.jsx   Apartado «Cuenta»: perfil y cierre de sesión
+│   │   ├── SecuritySettings.jsx  Apartado «Seguridad»: contraseña, recuperación y sesiones
+│   │   └── useSignOut.js         Cierre de sesión que espera a guardar los cambios pendientes
 │   ├── hooks/
 │   │   ├── useCloudPlan.js       Sincroniza el plan con la API (guardado, reintentos, conflictos)
 │   │   ├── usePlanView.js        Datos derivados del mes seleccionado (previsión, avisos…)
@@ -63,8 +72,10 @@ flowchart LR
 │   │   ├── finance.js            Cálculos de la previsión y validación de copias
 │   │   ├── backup.js             Exportar/importar copias JSON y plan vacío
 │   │   └── motion.js             Utilidades de animación (respeta «reducir movimiento»)
-│   ├── config/navigation.js      Secciones del menú y textos de cada página
-│   └── styles/                   global · auth · navigation · income · loading
+│   ├── config/
+│   │   ├── navigation.js         Secciones del menú lateral y textos de cada página
+│   │   └── settingsSections.js   Apartados de Configuración (orden, nombres e iconos)
+│   └── styles/                   global · auth · navigation · settings · income · loading
 │
 ├── backend/                      API (FastAPI)
 │   ├── app/
@@ -94,6 +105,19 @@ flowchart LR
 └── .env.example                  Plantilla de configuración (copiar a .env)
 ```
 
+## Página de Configuración
+
+La página se divide en apartados con un menú superior de pestañas (`SettingsTabs`). En móvil las pestañas usan nombres cortos. Cada apartado es un componente independiente:
+
+| Apartado | Componente | Contenido |
+| --- | --- | --- |
+| **Configuración económica** | `EconomicSettings` | Tipo de ingreso (fijo o variable por mes), presupuesto de vida diaria, colchón e inicio de la previsión, con un resumen del mes actual |
+| **Cuenta** | `AccountSettings` | Nombre, correo de acceso, estado de este dispositivo y cierre de sesión |
+| **Seguridad** | `SecuritySettings` | Cambio de contraseña (genera un nuevo código de recuperación), sesiones abiertas y cierre de todas |
+| **Datos y copias** | `DataSettings` | Estado del guardado, descargar e importar copias JSON y empezar de cero |
+
+El apartado activo lo controla `Dashboard` (`settingsSection`). Así se puede abrir uno concreto desde otra parte de la app: el avatar de la cabecera abre **Cuenta** y «Configurar mi plan» abre **Configuración económica**. Para añadir un apartado, basta con registrarlo en `src/config/settingsSections.js` y en el objeto `sections` de `src/pages/SettingsPage.jsx`.
+
 ## Guardado de la configuración
 
 ### Qué se guarda y dónde
@@ -118,7 +142,7 @@ La base de datos valida por sí misma cada fila, aunque falle la validación de 
 
 ### Cómo viaja un cambio
 
-1. **Formulario.** El usuario edita algo, por ejemplo en Configuración (`PlanSettingsForm` + `IncomeFields`), en un gasto (`ExpenseForm`) o al marcar un cobro. `Dashboard` actualiza el plan en memoria y la interfaz se recalcula al momento.
+1. **Formulario.** El usuario edita algo, por ejemplo en Configuración económica (`EconomicSettings` + `IncomeFields`), en un gasto (`ExpenseForm`) o al marcar un cobro. `Dashboard` actualiza el plan en memoria y la interfaz se recalcula al momento.
 2. **Agrupación.** `useCloudPlan` espera **800 ms** sin cambios y envía el plan completo con la revisión que conoce:
    ```http
    PUT /api/plan
@@ -182,7 +206,7 @@ La migración `0002` convirtió los planes que estaban guardados como JSON en la
 3. `backend/app/schemas.py`: el campo en `PlanDocument`, con valor por defecto para admitir copias antiguas.
 4. `backend/app/plan_store.py`: leerlo en `load_plan` y escribirlo en `save_plan`.
 5. `src/lib/finance.js` (`validateData`, `demoData`) y `src/lib/backup.js` (`emptyPlan`).
-6. El formulario en `src/components/settings/`.
+6. El campo en `src/components/settings/EconomicSettings.jsx`.
 7. Pruebas en `backend/tests/` y `tests/finance.test.js`.
 
 ## Puesta en marcha con Docker
@@ -262,7 +286,7 @@ Necesita un Chromium de Playwright (`npx playwright install chromium`) o uno exi
 
 Al registrarte se muestra una sola vez un código de recuperación: guárdalo en un lugar privado. El correo es el identificador de acceso; esta versión no envía emails ni verifica su titularidad. Cada cuenta empieza con un plan vacío.
 
-Desde Configuración puedes descargar una copia JSON del plan o restaurarla. Si en el navegador queda un plan de la versión anterior (sin cuentas), aparece un aviso para importarlo a tu cuenta.
+Desde **Configuración › Datos y copias** puedes descargar una copia JSON del plan o restaurarla. Si en el navegador queda un plan de la versión anterior (sin cuentas), aparece un aviso para importarlo a tu cuenta.
 
 ## Cálculos
 
