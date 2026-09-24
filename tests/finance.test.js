@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { addMonths, dueDate, forecast, isDue, validateData } from '../src/finance.js';
+import { addMonths, dueDate, forecast, isDue, validateData } from '../src/lib/finance.js';
 
 const base = { version: 1, startMonth: '2026-09', income: 2000, variable: 300, cushion: 100, expenses: [], paid: {} };
 const expense = (overrides = {}) => ({ id: 'test', name: 'Seguro', amount: 120, category: 'Seguros', frequency: 'yearly', day: 20, start: '2027-08', fund: 0, ...overrides });
