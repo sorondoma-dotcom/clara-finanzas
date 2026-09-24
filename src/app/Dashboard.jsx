@@ -11,8 +11,7 @@ import { DemoBanner, LegacyPlanBanner, SyncNotice } from '../components/layout/P
 import MonthPicker from '../components/ui/MonthPicker';
 import Toast from '../components/ui/Toast';
 import ExpenseForm from '../components/expenses/ExpenseForm';
-import PlanSettingsForm from '../components/settings/PlanSettingsForm';
-import AccountPanel from '../features/auth/AccountPanel';
+import { DEFAULT_SETTINGS_SECTION } from '../config/settingsSections';
 import PageSkeleton from '../components/ui/PageSkeleton';
 import { prefersReducedMotion } from '../lib/motion';
 import MethodModal from '../modals/MethodModal';
@@ -26,6 +25,7 @@ const ExpensesPage = lazy(() => import('../pages/ExpensesPage'));
 const CalendarPage = lazy(() => import('../pages/CalendarPage'));
 const ForecastPage = lazy(() => import('../pages/ForecastPage'));
 const ReservesPage = lazy(() => import('../pages/ReservesPage'));
+const SettingsPage = lazy(() => import('../pages/SettingsPage'));
 
 const SYNC_LABELS = { saved: 'Sincronizado con tu cuenta', saving: 'Guardando cambios…', pending: 'Cambios pendientes', conflict: 'Revisa el conflicto', error: 'Sin sincronizar', expired: 'Sesión caducada' };
 const SYNC_PROBLEMS = ['error', 'conflict', 'expired'];
@@ -46,6 +46,7 @@ export default function Dashboard({ initialPlan, user, authGeneration, onExpired
   // Gasto en edición o plan pendiente de importar, según el diálogo abierto.
   const [editing, setEditing] = useState(null);
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [settingsSection, setSettingsSection] = useState(DEFAULT_SETTINGS_SECTION);
   const [switching, setSwitching] = useState(false);
   const switchTimer = useRef();
   useEffect(() => () => clearTimeout(switchTimer.current), []);
@@ -64,6 +65,7 @@ export default function Dashboard({ initialPlan, user, authGeneration, onExpired
     clearTimeout(switchTimer.current);
     switchTimer.current = setTimeout(() => setSwitching(false), PAGE_TRANSITION_MS);
   };
+  const openSettings = section => { setSettingsSection(section); navigate('settings'); };
   const updateData = updater => setData(previous => ({ ...updater(previous), demo: false }));
   const openExpense = (expense = null) => { setEditing(expense); setModal('expense'); };
   const saveExpense = expense => {
@@ -86,7 +88,7 @@ export default function Dashboard({ initialPlan, user, authGeneration, onExpired
     catch { notify('El archivo no es una copia válida de Clara.'); }
   };
   const restorePlan = () => { setData(editing); setLegacy(null); setOffset(0); closeModal(); notify('Copia importada. Guardando en tu cuenta…'); };
-  const startPlan = () => { setData(emptyPlan()); setOffset(0); closeModal(); navigate('settings'); notify('Tu espacio está listo. Empieza por tus ingresos.'); };
+  const startPlan = () => { setData(emptyPlan()); setOffset(0); closeModal(); openSettings('economic'); notify('Tu espacio está listo. Empieza por tus ingresos.'); };
   const savePlanSettings = values => { updateData(d => ({ ...d, ...values })); setOffset(0); notify('Plan actualizado. Tus cuentas ya están recalculadas.'); };
 
   const pages = {
@@ -95,10 +97,11 @@ export default function Dashboard({ initialPlan, user, authGeneration, onExpired
     calendar: () => <CalendarPage key={view.month} view={view} isPaid={e => Boolean(data.paid[paidKey(e)])} onTogglePaid={togglePaid} />,
     forecast: () => <ForecastPage view={view} />,
     reserves: () => <ReservesPage view={view} onOpenExpense={openExpense} />,
-    settings: () => <>
-      <AccountPanel user={user} onLogout={onLogout} onAuthChanged={onAuthChanged} flush={cloud.flush} hasPending={cloud.hasPending} />
-      <PlanSettingsForm data={data} onSave={savePlanSettings} onExport={exportData} onImport={() => fileRef.current.click()} onReset={() => setModal('reset')} />
-    </>,
+    settings: () => <SettingsPage
+      section={settingsSection} onSectionChange={setSettingsSection} data={data} view={view} user={user} syncLabel={syncLabel} cloud={cloud}
+      onLogout={onLogout} onAuthChanged={onAuthChanged} onSavePlan={savePlanSettings}
+      onExport={exportData} onImport={() => fileRef.current.click()} onReset={() => setModal('reset')}
+    />,
   };
 
   return (
@@ -106,7 +109,7 @@ export default function Dashboard({ initialPlan, user, authGeneration, onExpired
       <Sidebar page={page} open={mobileOpen} expenseCount={data.expenses.length} userName={user.name} syncLabel={syncLabel} onNavigate={navigate} onShowMethod={() => setModal('method')} onClose={() => setMobileOpen(false)} />
       <div className="main-shell">
         {switching && <div className="route-progress" aria-hidden="true" />}
-        <Topbar page={page} user={user} syncLabel={syncLabel} hasAlerts={view.alerts.length > 0} menuOpen={mobileOpen} onToggleMenu={() => setMobileOpen(o => !o)} onShowAlerts={() => setModal('alerts')} onOpenAccount={() => navigate('settings')} />
+        <Topbar page={page} user={user} syncLabel={syncLabel} hasAlerts={view.alerts.length > 0} menuOpen={mobileOpen} onToggleMenu={() => setMobileOpen(o => !o)} onShowAlerts={() => setModal('alerts')} onOpenAccount={() => openSettings('account')} />
         <main>
           <PageHeading page={page} monthPicker={page !== 'settings' && <MonthPicker month={view.month} offset={offset} onChange={setOffset} />} onAddExpense={() => openExpense()} />
           {SYNC_PROBLEMS.includes(cloud.status) && <SyncNotice cloud={cloud} onExport={exportData} onReload={() => setModal('reload-cloud')} />}

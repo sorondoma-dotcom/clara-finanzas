@@ -16,5 +16,5 @@ export const pageCopy = {
   calendar: { title: 'Adelántate a cada cobro.', description: 'Todos tus vencimientos, sin perder de vista ninguno.' },
   forecast: { title: 'Mira lo que viene.', description: 'Doce meses por delante para decidir con perspectiva.' },
   reserves: { title: 'Tu tranquilidad, mes a mes.', description: 'Pequeñas reservas para que los grandes pagos no sorprendan.' },
-  settings: { title: 'Hagámoslo tuyo.', description: 'Ajusta las cifras que dan forma a tu previsión.' },
+  settings: { title: 'Hagámoslo tuyo.', description: 'Tu plan, tu cuenta y tu seguridad, cada cosa en su apartado.' },
 };

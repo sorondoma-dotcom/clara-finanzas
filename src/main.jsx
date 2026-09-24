@@ -5,6 +5,7 @@ import './styles/global.css';
 import './styles/auth.css';
 import './styles/navigation.css';
 import './styles/income.css';
+import './styles/settings.css';
 import './styles/loading.css';
 
 createRoot(document.getElementById('root')).render(<React.StrictMode><AppRoot /></React.StrictMode>);

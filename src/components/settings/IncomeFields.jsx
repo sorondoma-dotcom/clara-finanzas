@@ -1,7 +1,5 @@
 import React, { useState } from 'react';
-import { addMonths, euro, monthLabel } from '../../lib/finance';
-
-const sentenceCase = text => text.charAt(0).toUpperCase() + text.slice(1);
+import { addMonths, euro, monthLabel, monthTitle } from '../../lib/finance';
 
 const MODES = [
   { id: 'fixed', label: 'Ingreso fijo', hint: 'Nómina o pensión: cobras lo mismo cada mes.' },
@@ -38,7 +36,7 @@ export default function IncomeFields({ values, onChange }) {
           <div className="income-months-grid">
             {months.map(month => (
               <label key={month}>
-                <span>{sentenceCase(monthLabel(month))}</span>
+                <span>{monthTitle(month)}</span>
                 <input type="number" min="0" max="100000000" step="0.01" inputMode="decimal" aria-label={`Ingreso de ${monthLabel(month)}`} placeholder={euro(Number(values.income) || 0)} value={values.incomes[month] ?? ''} onChange={e => setIncomeFor(month, e.target.value)} />
               </label>
             ))}

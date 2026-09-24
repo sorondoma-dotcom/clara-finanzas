@@ -64,7 +64,9 @@ try {
   await mobile.getByRole('dialog').getByRole('button', { name: 'Cargar versión guardada' }).click();
   await expect(mobile.getByLabel('Ingresos netos mensuales')).toHaveValue('3300');
 
+  await page.getByRole('tab', { name: 'Seguridad' }).click();
   await page.getByRole('button', { name: 'Cerrar todas las sesiones' }).click();
+  await page.getByRole('dialog').getByRole('button', { name: 'Cerrar todas' }).click();
   await page.getByRole('button', { name: 'Entrar en Clara' }).waitFor();
   await mobile.reload();
   await mobile.getByRole('button', { name: 'Entrar en Clara' }).waitFor();

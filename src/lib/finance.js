@@ -2,6 +2,8 @@ export const euro = (value, decimals = 0) => new Intl.NumberFormat('es-ES', { st
 export const monthKey = (date) => `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
 export const addMonths = (key, amount) => { const [year, month] = key.split('-').map(Number); return monthKey(new Date(year, month - 1 + amount, 1)); };
 export const monthLabel = (key, short = false) => new Date(`${key}-01T12:00:00`).toLocaleDateString('es-ES', { month: short ? 'short' : 'long', ...(!short && { year: 'numeric' }) });
+/** «Septiembre de 2026»: solo la primera letra en mayúscula. */
+export const monthTitle = key => { const text = monthLabel(key); return text.charAt(0).toUpperCase() + text.slice(1); };
 export const monthDistance = (a, b) => { const [ay, am] = a.split('-').map(Number); const [by, bm] = b.split('-').map(Number); return (by - ay) * 12 + bm - am; };
 export const intervals = { monthly: 1, quarterly: 3, yearly: 12, once: 0 };
 export const monthlyReserve = expense => intervals[expense.frequency] > 1 ? Math.ceil(Math.round(expense.amount * 100) / intervals[expense.frequency]) / 100 : 0;
